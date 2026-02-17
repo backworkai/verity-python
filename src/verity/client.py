@@ -391,3 +391,112 @@ class VerityClient:
             body["state"] = state
         
         return self._request("POST", "/prior-auth/check", json=body, headers=headers)
+
+    # Prior Authorization Research
+    def research_prior_auth(
+        self,
+        procedure_codes: List[str],
+        payer: Optional[str] = None,
+        state: Optional[str] = None,
+        diagnosis_codes: Optional[List[str]] = None,
+        clinical_context: Optional[str] = None,
+        sync: bool = False,
+    ) -> Dict[str, Any]:
+        """Research prior authorization requirements using AI-powered web research.
+
+        Uses web research to find prior auth requirements directly from payer websites.
+        By default runs asynchronously - returns a research_id for polling with
+        get_prior_auth_research(). Set sync=True to wait for completion.
+
+        Args:
+            procedure_codes: CPT/HCPCS codes to research (max 10)
+            payer: Specific payer name (e.g., "UnitedHealthcare", "Aetna")
+            state: Two-letter state code for jurisdiction-specific policies
+            diagnosis_codes: ICD-10 diagnosis codes for clinical context
+            clinical_context: Additional clinical notes (max 2000 chars)
+            sync: If True, wait for completion (default: False)
+
+        Returns:
+            Research task info with research_id (async) or full results (sync).
+
+        Example:
+            >>> result = client.research_prior_auth(
+            ...     procedure_codes=["27447"],
+            ...     payer="UnitedHealthcare",
+            ...     state="TX",
+            ...     sync=True
+            ... )
+            >>> print(result["data"]["result"]["determination"])
+        """
+        body: Dict[str, Any] = {
+            "procedure_codes": procedure_codes,
+            "sync": sync,
+        }
+
+        if payer:
+            body["payer"] = payer
+        if state:
+            body["state"] = state
+        if diagnosis_codes:
+            body["diagnosis_codes"] = diagnosis_codes
+        if clinical_context:
+            body["clinical_context"] = clinical_context
+
+        return self._request("POST", "/prior-auth/research", json=body)
+
+    def get_prior_auth_research(
+        self,
+        research_id: str,
+    ) -> Dict[str, Any]:
+        """Get the status and results of a prior authorization research task.
+
+        Poll this endpoint until status is "completed" or "failed".
+
+        Args:
+            research_id: Research task ID from research_prior_auth()
+
+        Returns:
+            Research status and results when completed.
+
+        Example:
+            >>> result = client.get_prior_auth_research("res_abc123")
+            >>> if result["data"]["status"] == "completed":
+            ...     print(result["data"]["result"])
+        """
+        return self._request("GET", f"/prior-auth/research/{research_id}")
+
+    # Spending
+    def get_spending_by_code(
+        self,
+        code: Optional[str] = None,
+        codes: Optional[List[str]] = None,
+        year: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Get Medicaid spending data by HCPCS code.
+
+        Returns aggregate Medicaid provider spending statistics per HCPCS code,
+        including totals and year-over-year breakdowns from CMS claims data.
+
+        Args:
+            code: Single HCPCS code to look up
+            codes: Multiple HCPCS codes (comma-separated, max 10)
+            year: Filter to a specific year
+
+        Returns:
+            Spending data keyed by code with totals and yearly breakdowns.
+
+        Example:
+            >>> result = client.get_spending_by_code(code="T1019")
+            >>> print(result["data"]["T1019"]["total_paid"])
+        """
+        params: Dict[str, Any] = {}
+
+        if code:
+            params["code"] = code
+        elif codes:
+            params["codes"] = ",".join(codes)
+
+        if year:
+            params["year"] = year
+
+        return self._request("GET", "/spending/by-code", params=params)
