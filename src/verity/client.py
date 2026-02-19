@@ -173,9 +173,11 @@ class VerityClient:
         cursor: Optional[str] = None,
         limit: int = 50,
         include: Optional[List[str]] = None,
+        icd10: Optional[str] = None,
+        format: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Search and list policies.
-        
+
         Args:
             q: Search query (max 500 characters)
             mode: Search mode (keyword or semantic)
@@ -186,12 +188,14 @@ class VerityClient:
             cursor: Pagination cursor
             limit: Results per page (1-100)
             include: Additional data (summary, criteria, codes)
-        
+            icd10: Filter by ICD-10 diagnosis code
+            format: Response format
+
         Returns:
             List of policies with pagination metadata.
         """
         params = {"mode": mode, "status": status, "limit": limit}
-        
+
         if q:
             params["q"] = q
         if policy_type:
@@ -204,7 +208,11 @@ class VerityClient:
             params["cursor"] = cursor
         if include:
             params["include"] = ",".join(include)
-        
+        if icd10:
+            params["icd10"] = icd10
+        if format:
+            params["format"] = format
+
         return self._request("GET", "/policies", params=params)
 
     # Get Policy by ID
@@ -500,3 +508,138 @@ class VerityClient:
             params["year"] = year
 
         return self._request("GET", "/spending/by-code", params=params)
+
+    # Batch Code Lookup
+    def batch_lookup_codes(
+        self,
+        codes: List[str],
+        code_system: Optional[str] = None,
+        include: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Look up multiple medical codes in a single request (max 50).
+
+        Args:
+            codes: List of medical codes to look up (max 50)
+            code_system: Hint for code system (CPT, HCPCS, ICD10CM, ICD10PCS, NDC)
+            include: Additional data to include (rvu, policies)
+
+        Returns:
+            Batch lookup results keyed by code.
+
+        Example:
+            >>> result = client.batch_lookup_codes(["76942", "99213"])
+            >>> for code_data in result["data"]:
+            ...     print(code_data["description"])
+        """
+        body: Dict[str, Any] = {"codes": codes}
+
+        if code_system:
+            body["code_system"] = code_system
+        if include:
+            body["include"] = ",".join(include)
+
+        return self._request("POST", "/codes/batch", json=body)
+
+    # Coverage Evaluation
+    def evaluate_coverage(
+        self,
+        policy_id: str,
+        parameters: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Evaluate a policy's coverage criteria against patient/claim parameters. Requires Professional plan.
+
+        Args:
+            policy_id: Policy ID to evaluate against (e.g., L33831)
+            parameters: Patient/claim parameters to evaluate
+
+        Returns:
+            Coverage evaluation result with determination.
+
+        Example:
+            >>> result = client.evaluate_coverage("L33831", {"diagnosis": "M54.5"})
+            >>> print(result["data"]["determination"])
+        """
+        return self._request("POST", "/coverage/evaluate", json={"policy_id": policy_id, "parameters": parameters})
+
+    # Webhooks
+    def list_webhooks(self) -> Dict[str, Any]:
+        """List all webhook endpoints for your organization. Requires Enterprise plan.
+
+        Returns:
+            List of webhook endpoints with their configuration.
+        """
+        return self._request("GET", "/webhooks")
+
+    def create_webhook(
+        self,
+        url: str,
+        events: List[str],
+    ) -> Dict[str, Any]:
+        """Create a new webhook endpoint. URL must use HTTPS. Requires Enterprise plan.
+
+        Args:
+            url: HTTPS URL to receive webhook events
+            events: List of event types to subscribe to
+
+        Returns:
+            Created webhook endpoint details.
+
+        Example:
+            >>> webhook = client.create_webhook(
+            ...     url="https://example.com/webhooks/verity",
+            ...     events=["policy.updated", "policy.created"]
+            ... )
+            >>> print(webhook["data"]["id"])
+        """
+        return self._request("POST", "/webhooks", json={"url": url, "events": events})
+
+    def update_webhook(
+        self,
+        webhook_id: int,
+        url: Optional[str] = None,
+        events: Optional[List[str]] = None,
+        status: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Update a webhook endpoint's URL, events, or status.
+
+        Args:
+            webhook_id: ID of the webhook to update
+            url: New HTTPS URL for the webhook
+            events: New list of event types
+            status: New status (active, paused)
+
+        Returns:
+            Updated webhook endpoint details.
+        """
+        body: Dict[str, Any] = {}
+
+        if url is not None:
+            body["url"] = url
+        if events is not None:
+            body["events"] = events
+        if status is not None:
+            body["status"] = status
+
+        return self._request("PATCH", f"/webhooks/{webhook_id}", json=body)
+
+    def delete_webhook(self, webhook_id: int) -> Dict[str, Any]:
+        """Delete (soft-delete) a webhook endpoint.
+
+        Args:
+            webhook_id: ID of the webhook to delete
+
+        Returns:
+            Deletion confirmation.
+        """
+        return self._request("DELETE", f"/webhooks/{webhook_id}")
+
+    def test_webhook(self, webhook_id: int) -> Dict[str, Any]:
+        """Send a test event to a webhook endpoint.
+
+        Args:
+            webhook_id: ID of the webhook to test
+
+        Returns:
+            Test event delivery result.
+        """
+        return self._request("POST", f"/webhooks/{webhook_id}/test")
