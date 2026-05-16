@@ -110,6 +110,20 @@ if result["data"]["pa_required"]:
     print("Documentation needed:", result["data"]["documentation_checklist"])
 ```
 
+### Claim Validation
+
+```python
+claim = client.validate_claim(
+    procedure_codes=["99213"],
+    diagnosis_codes=["E11.9"],
+    payer="Medicare",
+    state="TX"
+)
+
+print("Coverage:", claim["data"]["coverage_status"])
+print("Denial risk:", claim["data"]["denial_risk"])
+```
+
 ### Policy Comparison
 
 ```python
@@ -140,6 +154,17 @@ criteria = client.search_criteria(
 jurisdictions = client.list_jurisdictions()
 for j in jurisdictions["data"]:
     print(f"{j['jurisdiction_code']}: {j['mac_name']} ({', '.join(j['states'])})")
+```
+
+### Compliance and Drug Formulary
+
+```python
+changes = client.list_unreviewed_changes(limit=10)
+stats = client.get_compliance_stats()
+
+formulary = client.search_drug_formulary_evidence("ozempic", payer="all", limit=5)
+for item in formulary["data"]:
+    print(item["drug_name"], item["coverage_status"])
 ```
 
 ## Error Handling
@@ -188,5 +213,5 @@ MIT License - see LICENSE file for details.
 ## Support
 
 - Documentation: https://verity.backworkai.com/docs
-- Issues: https://github.com/tylerbryy/verity-python/issues
+- Issues: https://github.com/backworkai/verity-python/issues
 - Email: support@verity.backworkai.com

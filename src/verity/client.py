@@ -77,7 +77,9 @@ class VerityClient:
                 headers=headers,
             )
             
-            if response.status_code == 200:
+            if 200 <= response.status_code < 300:
+                if not response.content:
+                    return {"success": True, "data": None}
                 return response.json()
             
             # Handle error responses
@@ -400,6 +402,111 @@ class VerityClient:
         
         return self._request("POST", "/prior-auth/check", json=body, headers=headers)
 
+    # Claim Validation
+    def validate_claim(
+        self,
+        procedure_codes: List[str],
+        payer: Optional[str] = None,
+        plan_type: Optional[str] = None,
+        line_of_business: Optional[str] = None,
+        diagnosis_codes: Optional[List[str]] = None,
+        modifiers: Optional[List[str]] = None,
+        state: Optional[str] = None,
+        site_of_service: Optional[str] = None,
+        provider_specialty: Optional[str] = None,
+        age_category: Optional[str] = None,
+        sex_when_policy_relevant: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Validate a claim for coverage and denial risk.
+
+        This calls the current `/claims/validate` endpoint.
+        """
+        return self._validate_claim_request(
+            "/claims/validate",
+            procedure_codes=procedure_codes,
+            payer=payer,
+            plan_type=plan_type,
+            line_of_business=line_of_business,
+            diagnosis_codes=diagnosis_codes,
+            modifiers=modifiers,
+            state=state,
+            site_of_service=site_of_service,
+            provider_specialty=provider_specialty,
+            age_category=age_category,
+            sex_when_policy_relevant=sex_when_policy_relevant,
+            idempotency_key=idempotency_key,
+        )
+
+    def validate_claim_legacy(
+        self,
+        procedure_codes: List[str],
+        payer: Optional[str] = None,
+        plan_type: Optional[str] = None,
+        line_of_business: Optional[str] = None,
+        diagnosis_codes: Optional[List[str]] = None,
+        modifiers: Optional[List[str]] = None,
+        state: Optional[str] = None,
+        site_of_service: Optional[str] = None,
+        provider_specialty: Optional[str] = None,
+        age_category: Optional[str] = None,
+        sex_when_policy_relevant: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Validate a claim through the deprecated `/claim-validation` endpoint."""
+        return self._validate_claim_request(
+            "/claim-validation",
+            procedure_codes=procedure_codes,
+            payer=payer,
+            plan_type=plan_type,
+            line_of_business=line_of_business,
+            diagnosis_codes=diagnosis_codes,
+            modifiers=modifiers,
+            state=state,
+            site_of_service=site_of_service,
+            provider_specialty=provider_specialty,
+            age_category=age_category,
+            sex_when_policy_relevant=sex_when_policy_relevant,
+            idempotency_key=idempotency_key,
+        )
+
+    def _validate_claim_request(
+        self,
+        path: str,
+        procedure_codes: List[str],
+        payer: Optional[str] = None,
+        plan_type: Optional[str] = None,
+        line_of_business: Optional[str] = None,
+        diagnosis_codes: Optional[List[str]] = None,
+        modifiers: Optional[List[str]] = None,
+        state: Optional[str] = None,
+        site_of_service: Optional[str] = None,
+        provider_specialty: Optional[str] = None,
+        age_category: Optional[str] = None,
+        sex_when_policy_relevant: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        body: Dict[str, Any] = {"procedure_codes": procedure_codes}
+        optional_fields = {
+            "payer": payer,
+            "plan_type": plan_type,
+            "line_of_business": line_of_business,
+            "diagnosis_codes": diagnosis_codes,
+            "modifiers": modifiers,
+            "state": state,
+            "site_of_service": site_of_service,
+            "provider_specialty": provider_specialty,
+            "age_category": age_category,
+            "sex_when_policy_relevant": sex_when_policy_relevant,
+        }
+        body.update({key: value for key, value in optional_fields.items() if value is not None})
+
+        headers = {}
+        if idempotency_key:
+            headers["X-Idempotency-Key"] = idempotency_key
+
+        return self._request("POST", path, json=body, headers=headers)
+
     # Prior Authorization Research
     def research_prior_auth(
         self,
@@ -643,3 +750,58 @@ class VerityClient:
             Test event delivery result.
         """
         return self._request("POST", f"/webhooks/{webhook_id}/test")
+
+    # Compliance
+    def list_unreviewed_changes(
+        self,
+        change_type: Optional[str] = None,
+        cursor: Optional[str] = None,
+        limit: int = 50,
+    ) -> Dict[str, Any]:
+        """List unreviewed policy changes for the authenticated organization."""
+        params: Dict[str, Any] = {"limit": limit}
+        if change_type:
+            params["change_type"] = change_type
+        if cursor:
+            params["cursor"] = cursor
+
+        return self._request("GET", "/compliance/unreviewed", params=params)
+
+    def acknowledge_change(
+        self,
+        diff_id: int,
+        notes: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Acknowledge a single policy change."""
+        body: Dict[str, Any] = {"diff_id": diff_id}
+        if notes is not None:
+            body["notes"] = notes
+
+        return self._request("POST", "/compliance/ack", json=body)
+
+    def bulk_acknowledge_changes(
+        self,
+        diff_ids: List[int],
+        notes: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Acknowledge multiple policy changes."""
+        body: Dict[str, Any] = {"diff_ids": diff_ids}
+        if notes is not None:
+            body["notes"] = notes
+
+        return self._request("POST", "/compliance/ack/bulk", json=body)
+
+    def get_compliance_stats(self) -> Dict[str, Any]:
+        """Get compliance dashboard statistics."""
+        return self._request("GET", "/compliance/stats")
+
+    # Drugs
+    def search_drug_formulary_evidence(
+        self,
+        q: str,
+        payer: str = "all",
+        limit: int = 25,
+    ) -> Dict[str, Any]:
+        """Search commercial pharmacy-benefit formulary evidence."""
+        params = {"q": q, "payer": payer, "limit": limit}
+        return self._request("GET", "/drugs/formulary", params=params)
