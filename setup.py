@@ -11,7 +11,7 @@ setup(
     description="Python SDK for Verity API - Medicare coverage policies and prior authorization",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/tylerbryy/verity-python",
+    url="https://github.com/backworkai/verity-python",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
