@@ -4,6 +4,14 @@ Official Python client for the [Verity API](https://verity.backworkai.com): Medi
 
 ## Installation
 
+Install from GitHub until the first PyPI release is indexed:
+
+```bash
+pip install git+https://github.com/backworkai/verity-python.git
+```
+
+After the first PyPI release, install it directly:
+
 ```bash
 pip install verity-api
 ```
