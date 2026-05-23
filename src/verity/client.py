@@ -417,10 +417,13 @@ class VerityClient:
         age_category: Optional[str] = None,
         sex_when_policy_relevant: Optional[str] = None,
         idempotency_key: Optional[str] = None,
+        date_of_service: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Validate a claim for coverage and denial risk.
 
         This calls the current `/claims/validate` endpoint.
+        Responses include aggregate `issues`, policy-only `matched_policies`,
+        and all source references in `policy_sources`.
         """
         return self._validate_claim_request(
             "/claims/validate",
@@ -431,6 +434,7 @@ class VerityClient:
             diagnosis_codes=diagnosis_codes,
             modifiers=modifiers,
             state=state,
+            date_of_service=date_of_service,
             site_of_service=site_of_service,
             provider_specialty=provider_specialty,
             age_category=age_category,
@@ -452,6 +456,7 @@ class VerityClient:
         age_category: Optional[str] = None,
         sex_when_policy_relevant: Optional[str] = None,
         idempotency_key: Optional[str] = None,
+        date_of_service: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Validate a claim through the deprecated `/claim-validation` endpoint."""
         return self._validate_claim_request(
@@ -463,6 +468,7 @@ class VerityClient:
             diagnosis_codes=diagnosis_codes,
             modifiers=modifiers,
             state=state,
+            date_of_service=date_of_service,
             site_of_service=site_of_service,
             provider_specialty=provider_specialty,
             age_category=age_category,
@@ -485,6 +491,7 @@ class VerityClient:
         age_category: Optional[str] = None,
         sex_when_policy_relevant: Optional[str] = None,
         idempotency_key: Optional[str] = None,
+        date_of_service: Optional[str] = None,
     ) -> Dict[str, Any]:
         body: Dict[str, Any] = {"procedure_codes": procedure_codes}
         optional_fields = {
@@ -494,6 +501,7 @@ class VerityClient:
             "diagnosis_codes": diagnosis_codes,
             "modifiers": modifiers,
             "state": state,
+            "date_of_service": date_of_service,
             "site_of_service": site_of_service,
             "provider_specialty": provider_specialty,
             "age_category": age_category,
