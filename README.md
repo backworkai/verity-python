@@ -74,15 +74,18 @@ claim = client.validate_claim(
     diagnosis_codes=["E11.9"],
     payer="Medicare",
     state="TX",
+    date_of_service="2026-05-23",
 )
 
 print(claim["data"]["coverage_status"], claim["data"]["denial_risk"])
+print(claim["data"]["issues"], claim["data"]["matched_policies"])
 ```
 
 ### Coverage, Spending, and Compliance
 
 ```python
 criteria = client.search_criteria(q="diabetes", section="indications", limit=10)
+print(criteria["data"][0]["policy_id"], criteria["data"][0]["policy_title"])
 spending = client.get_spending_by_code(codes=["T1019", "T1020"], year=2023)
 changes = client.list_unreviewed_changes(limit=10)
 stats = client.get_compliance_stats()
