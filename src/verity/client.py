@@ -42,7 +42,7 @@ class VerityClient:
         self._client = httpx.Client(
             headers={
                 "Authorization": f"Bearer {api_key}",
-                "User-Agent": "verity-python/1.0.0",
+                "User-Agent": "verity-api-python/1.0.0",
             },
             timeout=timeout,
         )

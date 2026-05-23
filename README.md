@@ -5,7 +5,7 @@ Official Python client for the [Verity API](https://verity.backworkai.com): Medi
 ## Installation
 
 ```bash
-pip install verity-sdk
+pip install verity-api
 ```
 
 Requires Python 3.8 or newer.
@@ -149,6 +149,15 @@ with VerityClient("vrt_live_YOUR_API_KEY") as client:
 python -m pip install -e ".[dev]"
 PYTHONPATH=src python -m pytest
 ```
+
+## Release
+
+The package publishes to PyPI as `verity-api` and imports as `verity`.
+
+1. Configure PyPI Trusted Publishing for `backworkai/verity-python`, workflow `publish.yml`, environment `pypi`, project `verity-api`.
+2. Update `setup.py` and `src/verity/__init__.py` to the new version.
+3. Push a matching tag, for example `v1.0.0`.
+4. The publish workflow builds, checks, and uploads the distributions to PyPI via OIDC.
 
 ## Support
 
